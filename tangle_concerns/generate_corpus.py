@@ -100,10 +100,14 @@ def worker(work, subject_location, id_, temp_loc, extractor_location):
                 # logger.warning(f'Ignoring {from_} because the commit has no parents')
                 continue
 
+            # 将v1仓库回溯到from_提交的父提交
+            # 在对比from_提交与其他提交的差异前，需要有from_提交之前的代码状态，这个状态用作差异比较的起点
             gh.set_git_to_rev(from_ + '^', v1)
+            # 将v2仓库回溯到from_提交
             gh.set_git_to_rev(from_, v2)
 
             labeli_changes = dict()
+            # 获取from_提交与from_提交的父提交之间的在v2仓库的差异
             labeli_changes[0] = gh.process_diff_between_commits(from_ + '^', from_, v2)
             previous_sha = from_
             i = 1

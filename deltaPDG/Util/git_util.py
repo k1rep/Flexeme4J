@@ -121,7 +121,7 @@ class Git_Util(object):
 
     @staticmethod
     def get_all_commit_hashes(path: str) -> List[str]:
-        commit_hashes_process = subprocess.Popen(['git', 'log', '--branches=*', '--format=oneline'],
+        commit_hashes_process = subprocess.Popen(['git', 'log', '--branches=*', '--reverse', '--format=oneline'],
                                                  stdout=subprocess.PIPE, cwd=path).stdout
         commit_hashes = commit_hashes_process.readlines()
         commit_hashes_process.close()
