@@ -85,44 +85,15 @@ def both_are_atomic(gh, path):
 
 
 def tangle_by_file(subject, temp_loc):
-    # days = 14
-    # up_to_concerns = 4
-
     git_handler = Git_Util(temp_dir=temp_loc)
 
     with git_handler as gh:
         temp = gh.move_git_repo_to_tmp(subject)
-        commit_hashes = gh.get_all_commit_hashes_authors_dates_messages(temp)
-
-        # candidates_by_author = defaultdict(list)
-        # for sha, author, date, msg, diff in candidates:
-        #     candidates_by_author[author].append((sha, date, msg))
-        # candidates_by_author = dict(candidates_by_author)
-
+        commit_hashes = gh.get_all_commit_hashes(temp)
         history_flat = []
-        # for candidates in candidates_by_author.values():
-        #     candidates = sorted(candidates, key=lambda p: p[1])
-        #     index = 0
-        #     while index < len(candidates):
-        #         sha, date, msg = candidates[index]
-        #         index += 1
-        #         if len(set(msg.upper().split()).intersection(KEYWORDS)) <= 1:
-        #             chain = [sha]
-        #             for offset in range(1, up_to_concerns):
-        #                 try:
-        #                     new_sha, new_date, new_msg = candidates[index + offset]
-        #                     if new_date - date <= datetime.timedelta(days=days) \
-        #                             and len(set(new_msg.upper().split()).intersection(KEYWORDS)) <= 1:
-        #                         chain.append(new_sha)
-        #                         index += 1
-        #                     else:
-        #                         break
-        #                 except IndexError:
-        #                     break
-        #             if len(chain) > 1:
-        #                 history_flat.append(chain)
         if commit_hashes:
-            history_flat.append(commit_hashes)
+            for i in range(len(commit_hashes) - 1):
+                history_flat.append((commit_hashes[i], commit_hashes[i + 1]))
 
     return history_flat
 
