@@ -5,7 +5,7 @@ import os
 import sys
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-from threading import Thread
+from multiprocessing import Process
 import jsonpickle
 import networkx as nx
 from deltaPDG.Util.generate_pdg import PDG_Generator
@@ -180,13 +180,13 @@ if __name__ == '__main__':
     chunck_size = int(len(list_to_tangle) / n_workers)
     list_to_tangle = [list_to_tangle[i:i + chunck_size] for i in range(0, len(list_to_tangle), chunck_size)]
 
-    threads = []
+    processes = []
     id_ = int(sys.argv[5])
     for work in list_to_tangle:
-        t = Thread(target=worker, args=(work, subject_location, id_, temp_loc, extractor_location))
+        process = Process(target=worker, args=(work, subject_location, id_, temp_loc, extractor_location))
         id_ += 1
-        threads.append(t)
-        t.start()
+        processes.append(process)
+        process.start()
 
-    for t in threads:
-        t.join()
+    for p in processes:
+        p.join()

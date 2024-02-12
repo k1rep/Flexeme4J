@@ -103,5 +103,5 @@ if __name__ == '__main__':
     history_flat = tangle_by_file('../subjects/%s' % repository_name, '../temp')
     output_dir = '../out/{}'.format(repository_name)
     os.makedirs(output_dir, exist_ok=True)
-    with open(os.path.join(output_dir, '{}_history_filtered_flat_1.json'.format(repository_name)), 'w') as f:
+    with open(os.path.join(output_dir, '{}_history_filtered_flat.json'.format(repository_name)), 'w') as f:
         f.write(json.dumps(history_flat))
