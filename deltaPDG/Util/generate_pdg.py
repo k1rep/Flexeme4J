@@ -21,6 +21,9 @@ class PDG_Generator(object):
         self.location = extractor_location
 
     def __call__(self, filename):
+        # 如果文件不存在，直接返回
+        if not os.path.exists(self.repository_location + filename):
+            return
         print("Generating PDG for %s" % self.repository_location + filename)
         # jar_path = "./PDGExtractor/PropertyGraph.jar"
         # jar_path = "./PDGExtractor/TinyPDG-0.1.0.jar"

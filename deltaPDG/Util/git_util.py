@@ -162,7 +162,7 @@ class Git_Util(object):
 
     @staticmethod
     def get_all_commit_hashes_authors_dates_messages(path: str) -> List[Tuple[str, str, datetime.datetime, str, Any]]:
-        commit_hashes_process = subprocess.Popen(['git', 'log', '--branches=*', '--unified=0'],
+        commit_hashes_process = subprocess.Popen(['git', 'log', '--branches=*', '--reverse', '--unified=0'],
                                                  stdout=subprocess.PIPE, cwd=path).stdout
         commit_hashes = commit_hashes_process.read().decode('utf-8', 'replace')
         commit_hashes_process.close()

@@ -9,6 +9,8 @@ class Marked_Merger(object):
 
     def __call__(self, before_apdg, after_apdg):
         before_apdg = before_apdg.copy()
+        if before_apdg is None:
+            return after_apdg
         after_apdg = after_apdg.copy()
         label_map_ab = dict()
         label_map_ba = dict()

@@ -89,7 +89,8 @@ def tangle_by_file(subject, temp_loc):
 
     with git_handler as gh:
         temp = gh.move_git_repo_to_tmp(subject)
-        commit_hashes = gh.get_all_commit_hashes(temp)
+        commit_hashes = gh.get_all_commit_hashes_authors_dates_messages(temp)
+        commit_hashes = [c[0] for c in commit_hashes]
         history_flat = []
         if commit_hashes:
             for i in range(len(commit_hashes) - 1):

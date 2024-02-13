@@ -91,61 +91,51 @@ def worker(work, subject_location, id_, temp_loc, extractor_location):
         for chain in work:
             print('Working on chain: %s' % str(chain))
             from_ = chain[0]
+            to_ = chain[1]
 
-            from git import Repo
-            repo = Repo(v1)
-            commit = repo.commit(from_)
+            gh.set_git_to_rev(from_, v1)
+            gh.set_git_to_rev(to_, v2)
 
-            if len(commit.parents) == 0:
-                # logger.warning(f'Ignoring {from_} because the commit has no parents')
-                continue
+            # labeli_changes = dict()
+            # # 获取from_提交与from_提交的父提交之间的在v2仓库的差异
+            # labeli_changes[0] = gh.process_diff_between_commits(from_ + '^', from_, v2)
+            # previous_sha = from_
+            # i = 1
+            # for to_ in chain[1:]:
+            #     gh.cherry_pick_on_top(to_, v2)
 
-            # 将v1仓库回溯到from_提交的父提交
-            # 在对比from_提交与其他提交的差异前，需要有from_提交之前的代码状态，这个状态用作差异比较的起点
-            gh.set_git_to_rev(from_ + '^', v1)
-            # 将v2仓库回溯到from_提交
-            gh.set_git_to_rev(from_, v2)
+            changes = gh.process_diff_between_commits(from_, to_, v2)
 
-            labeli_changes = dict()
-            # 获取from_提交与from_提交的父提交之间的在v2仓库的差异
-            labeli_changes[0] = gh.process_diff_between_commits(from_ + '^', from_, v2)
-            previous_sha = from_
-            i = 1
-            for to_ in chain[1:]:
-                gh.cherry_pick_on_top(to_, v2)
-
-                changes = gh.process_diff_between_commits(from_ + '^', to_, v2)
-
-                labeli_changes[i] = gh.process_diff_between_commits(previous_sha, to_, v2)
-                i += 1
-                previous_sha = to_
-                files_touched = {filename for _, filename, _, _, _ in changes if
+                # labeli_changes[i] = gh.process_diff_between_commits(previous_sha, to_, v2)
+                # i += 1
+                # previous_sha = to_
+            files_touched = {filename for _, filename, _, _, _ in changes if
                                  os.path.basename(filename).split('.')[-1] == 'java'}
 
-                for filename in files_touched:
-                    local_filename = os.path.normpath(filename.lstrip('/'))
-                    logging.info(f"Generating PDGs for {filename}")
+            for filename in files_touched:
+                local_filename = os.path.normpath(filename.lstrip('/'))
+                logging.info(f"Generating PDGs for {filename}")
+                try:
+                    output_path = './data/corpora_raw/%s/%s_%s/%s.dot' % (
+                        repository_name, from_, to_, os.path.basename(filename))
                     try:
-                        output_path = './data/corpora_raw/%s/%s_%s/%d/%s.dot' % (
-                            repository_name, from_, to_, i, os.path.basename(filename))
-                        try:
-                            with open(output_path) as f:
-                                print('Skipping %s as it exits' % output_path)
-                                f.read()
-                        except FileNotFoundError:
-                            v1_pdg_generator(filename)
-                            v2_pdg_generator(filename)
-                            delta_gen = deltaPDG('./temp/%d/before_pdg.dot' % id_, m_fuzziness=method_fuzziness,
-                                                 n_fuzziness=node_fuzziness)
-                            delta_pdg = delta_gen('./temp/%d/after_pdg.dot' % id_,
-                                                  [ch for ch in changes if ch[1] == filename])
-                            delta_pdg = mark_originating_commit(delta_pdg, mark_origin(changes, labeli_changes),
-                                                                filename)
-                            os.makedirs(os.path.dirname(output_path), exist_ok=True)
-                            nx.set_node_attributes(delta_pdg, local_filename, "filepath")
-                            nx.drawing.nx_pydot.write_dot(quote_label(delta_pdg), output_path)
-                    except Exception:
-                        pass
+                        with open(output_path) as f:
+                            print('Skipping %s as it exits' % output_path)
+                            f.read()
+                    except FileNotFoundError:
+                        v1_pdg_generator(filename)
+                        v2_pdg_generator(filename)
+                        delta_gen = deltaPDG('./temp/%d/before_pdg.dot' % id_, m_fuzziness=method_fuzziness,
+                                             n_fuzziness=node_fuzziness)
+                        delta_pdg = delta_gen('./temp/%d/after_pdg.dot' % id_,
+                                              [ch for ch in changes if ch[1] == filename])
+                        # delta_pdg = mark_originating_commit(delta_pdg, mark_origin(changes, labeli_changes),
+                        #                                     filename)
+                        os.makedirs(os.path.dirname(output_path), exist_ok=True)
+                        nx.set_node_attributes(delta_pdg, local_filename, "filepath")
+                        nx.drawing.nx_pydot.write_dot(quote_label(delta_pdg), output_path)
+                except Exception:
+                    pass
                 # if len(files_touched) != 0:
                 #     merged_path = merge_files_pdg(out_dir)
                 #     clean_path = clean_graph(merged_path, repository_name)
