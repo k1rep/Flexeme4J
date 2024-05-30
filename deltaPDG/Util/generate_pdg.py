@@ -1,37 +1,43 @@
 import json
 import os
-import shutil
 import subprocess
-
+import logging
 import networkx as nx
 
 from deltaPDG.Util.merge_nameflow import add_nameflow_edges
 from deltaPDG.Util.pygraph_util import read_graph_from_dot, obj_dict_to_networkx
 
 
-class PDG_Generator(object):
-    """
-    This class serves as a wrapper to abstract away calling the C# compiled PDG extractor
-    """
+logging.basicConfig(level=logging.INFO,
+                    format='[%(asctime)s][%(name)s] %(levelname)s: %(message)s',
+                    datefmt='%Y-%m-%d %H:%M:%S',
+                    handlers=[logging.StreamHandler()])
 
-    def __init__(self, repository_location, target_filename="pdg.dot", target_location=os.getcwd(), extractor_location="./PDGExtractor/TinyPDG-0.1.0.jar"):
+
+class PdgGenerator:
+    """
+    This class serves as a wrapper to abstract away calling the Java compiled PDG extractor
+    """
+    def __init__(self, repository_location, target_filename="pdg.dot",
+                 target_location=os.getcwd(), extractor_location="./PDGExtractor/TinyPDG-0.1.0.jar"):
         self.repository_location = repository_location
         self.target_filename = target_filename
         self.target_location = target_location
-        self.location = extractor_location
+        self.extractor_location = extractor_location
 
     def __call__(self, filename):
-        # 如果文件不存在，直接返回
+        # if the file does not exist, return
         if not os.path.exists(self.repository_location + filename):
             return
-        print("Generating PDG for %s" % self.repository_location + filename)
+        logging.info(f"Extracting PDG for {os.path.join(self.repository_location, filename)}")
         # jar_path = "./PDGExtractor/PropertyGraph.jar"
         # jar_path = "./PDGExtractor/TinyPDG-0.1.0.jar"
-        command = ["java", "-jar", self.location, "-d", self.repository_location + filename, "-p", os.path.join(self.target_location, self.target_filename)]
+        command = ["java", "-jar", self.extractor_location, "-d", self.repository_location + filename,
+                   "-p", os.path.join(self.target_location, self.target_filename)]
         process = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
         stdout, stderr = process.communicate()
         if stderr:
-            print(stderr)
+            logging.error(stderr)
 
         # t_filename = os.path.basename(filename).split('.')[0]
         # bin_path = t_filename + '.bin'
@@ -98,3 +104,5 @@ class PDG_Generator(object):
         except FileNotFoundError:
             # No file, nothing to add
             pass
+        except Exception as e:
+            logging.error(f"Error adding nameflow edges: {e}")

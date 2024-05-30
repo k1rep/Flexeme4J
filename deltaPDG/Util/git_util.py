@@ -10,7 +10,7 @@ commit_line = re.compile(r'commit [0-9a-f]{40}\n')
 captured_commit_line = re.compile(r'(commit [0-9a-f]{40}\n)')
 
 
-class Git_Util(object):
+class GitUtil(object):
     def __init__(self, temp_dir):
         self.temp_dir = temp_dir
 
@@ -35,13 +35,14 @@ class Git_Util(object):
 
     @staticmethod
     def set_git_to_rev(sha: str, path: str):
+        subprocess.run(['git', 'config', 'advice.detachedHead', 'false'], cwd=path)
         git_reset_process = subprocess.Popen(['git', 'checkout', '-f', sha], cwd=path)
         git_reset_process.wait()
 
     @staticmethod
     def get_commits_for_file(filename: str, path: str) -> List[str]:
         git_log_process = subprocess.Popen(['git', 'log', '--format=oneline', '--follow', '--', filename],
-                                            cwd=path, stdout=subprocess.PIPE)
+                                           cwd=path, stdout=subprocess.PIPE)
         result = list(map(lambda line: line.decode('utf-8', 'replace').strip().split(' ')[0],
                           git_log_process.stdout.readlines()))
         git_log_process.stdout.close()
@@ -58,7 +59,7 @@ class Git_Util(object):
                           gen_str_process.stdout.readlines()))
         gen_str_process.stdout.close()
         gen_str_process = subprocess.Popen(('git log ' + old + ' -n 1 --format=%ad').split(' '),
-                                            cwd=path, stdout=subprocess.PIPE)
+                                           cwd=path, stdout=subprocess.PIPE)
         dates += list(map(lambda line: eut.parsedate_to_datetime(line.decode('utf-8', 'replace').strip()),
                           gen_str_process.stdout.readlines()))
         gen_str_process.stdout.close()
@@ -70,13 +71,13 @@ class Git_Util(object):
     @staticmethod
     def cherry_pick_on_top(sha: str, path: str):
         git_cherry_process = subprocess.Popen(['git', 'cherry-pick', '--strategy=recursive', '-X', 'theirs', '-n', sha],
-                                               cwd=path)
+                                              cwd=path)
         git_cherry_process.wait()
 
     @staticmethod
     def get_current_head(path: str) -> str:
         get_head_process = subprocess.Popen(['git', 'rev-parse', 'HEAD'],
-                                             stdout=subprocess.PIPE, cwd=path).stdout
+                                            stdout=subprocess.PIPE, cwd=path).stdout
         show_lines = list(map(lambda line: line.decode('utf-8', 'replace'), get_head_process.readlines()))
         get_head_process.close()
 
@@ -85,7 +86,7 @@ class Git_Util(object):
     @staticmethod
     def process_diff_between_commits(sha_old: str, sha_new: str, path: str) -> List[Tuple[str, str, int, int, str]]:
         diff_show_process = subprocess.Popen(['git', 'diff', '%s..%s' % (sha_old, sha_new)],
-                                              stdout=subprocess.PIPE, cwd=path).stdout
+                                             stdout=subprocess.PIPE, cwd=path).stdout
         show_lines = list(map(lambda line: line.decode('utf-8', 'replace'), diff_show_process.readlines()))
         diff_show_process.close()
 
@@ -108,12 +109,12 @@ class Git_Util(object):
                     current_diff += curr_line
                 current_index += 1
 
-        return [v for sublist in list(map(Git_Util.process_diff_output, diffs)) for v in sublist]
+        return [v for sublist in list(map(GitUtil.process_diff_output, diffs)) for v in sublist]
 
     @staticmethod
     def get_commit_msg(sha: str, path: str) -> str:
         commit_msg_process = subprocess.Popen(('git log --format=%B -n 1 ' + sha).split(' '),
-                                               stdout=subprocess.PIPE, cwd=path).stdout
+                                              stdout=subprocess.PIPE, cwd=path).stdout
         show_lines = list(map(lambda line: line.decode('utf-8', 'replace'), commit_msg_process.readlines()))
         commit_msg_process.close()
 
@@ -156,7 +157,7 @@ class Git_Util(object):
 
         diffs = msg_and_diff[1:]
         diffs = [i1 + i2 for i1, i2 in zip(diffs[0::2], diffs[1::2])]
-        diffs = [v for sublist in list(map(Git_Util.process_diff_output, diffs)) for v in sublist]
+        diffs = [v for sublist in list(map(GitUtil.process_diff_output, diffs)) for v in sublist]
 
         return sha, author, date, msg, diffs
 
@@ -169,12 +170,12 @@ class Git_Util(object):
         list_of_commit_metadata = re.split(captured_commit_line, commit_hashes)[1:]
         list_of_commit_metadata = [i1 + i2 for i1, i2 in
                                    zip(list_of_commit_metadata[0::2], list_of_commit_metadata[1::2])]
-        return [e for e in [Git_Util.parse_git_log_entry(e) for e in list_of_commit_metadata] if e is not None]
+        return [e for e in [GitUtil.parse_git_log_entry(e) for e in list_of_commit_metadata] if e is not None]
 
     @staticmethod
     def get_author(sha: str, path: str) -> str:
         commit_show_process = subprocess.Popen(['git', 'show', '--format=fuller', '--unified=0', sha],
-                                                stdout=subprocess.PIPE, cwd=path).stdout
+                                               stdout=subprocess.PIPE, cwd=path).stdout
         show_lines = list(map(lambda line: line.decode('utf-8', 'replace'), commit_show_process.readlines()))
         commit_show_process.close()
 
@@ -192,7 +193,7 @@ class Git_Util(object):
     @staticmethod
     def process_a_commit(sha: str, path: str) -> Tuple[str, List[Tuple[str, str, int, int, str]]]:
         commit_show_process = subprocess.Popen(['git', 'show', '--format=fuller', '--unified=0', sha],
-                                                stdout=subprocess.PIPE, cwd=path).stdout
+                                               stdout=subprocess.PIPE, cwd=path).stdout
         show_lines = list(map(lambda line: line.decode('utf-8', 'replace'), commit_show_process.readlines()))
         commit_show_process.close()
 
@@ -237,13 +238,13 @@ class Git_Util(object):
                     current_diff += curr_line
                 current_index += 1
 
-        diffs = [v for sublist in list(map(Git_Util.process_diff_output, diffs)) for v in sublist]
+        diffs = [v for sublist in list(map(GitUtil.process_diff_output, diffs)) for v in sublist]
         return author, diffs
 
     @staticmethod
     def process_git_blame(file, path):
         commit_show_process = subprocess.Popen(['git', 'blame', file],
-                                                stdout=subprocess.PIPE, cwd=path).stdout
+                                               stdout=subprocess.PIPE, cwd=path).stdout
         show_lines = list(map(lambda line: line.decode('utf-8', 'replace'), commit_show_process.readlines()))
         commit_show_process.close()
         lines = [(line[:line.index('(') - 1][:8], line[line.index(')') + 2:]) for line in show_lines]

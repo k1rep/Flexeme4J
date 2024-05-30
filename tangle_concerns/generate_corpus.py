@@ -3,23 +3,27 @@ import json
 import logging
 import os
 import sys
-
-sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from multiprocessing import Process
 import jsonpickle
 import networkx as nx
-from deltaPDG.Util.generate_pdg import PDG_Generator
-from deltaPDG.Util.git_util import Git_Util
+from deltaPDG.Util.generate_pdg import PdgGenerator
+from deltaPDG.Util.git_util import GitUtil
 from deltaPDG.deltaPDG import deltaPDG, quote_label
 from tangle_concerns.tangle_by_file import tangle_by_file
 
-logging.basicConfig(level=logging.DEBUG,
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
+
+logging.basicConfig(level=logging.INFO,
                     format='[%(asctime)s][%(name)s] %(levelname)s: %(message)s',
                     datefmt='%Y-%m-%d %H:%M:%S',
                     handlers=[logging.StreamHandler()])
 
 
 def mark_originating_commit(dpdg, marked_diff, filename):
+    """
+    Mark the nodes in the delta-pdg with the originating commit.
+    """
     dpdg = dpdg.copy()
     for node, data in dpdg.nodes(data=True):
         if 'color' in data.keys() and data['color'] != 'orange':
@@ -54,6 +58,9 @@ def mark_originating_commit(dpdg, marked_diff, filename):
 
 
 def mark_origin(tangled_diff, atomic_diffs):
+    """
+    Marks which atomic change the change is associated with, returning a list of messages with the source marked.
+    """
     output = list()
     for change_type, file, after_coord, before_coord, line in tangled_diff:
         if change_type != ' ':
@@ -68,93 +75,94 @@ def mark_origin(tangled_diff, atomic_diffs):
 
 def worker(work, subject_location, id_, temp_loc, extractor_location):
     repository_name = os.path.basename(subject_location)
+    # Tolerance of a certain amount of disturbance in the PDG
     method_fuzziness = 100
     node_fuzziness = 100
 
-    git_handler = Git_Util(temp_dir=temp_loc)
+    git_handler = GitUtil(temp_dir=temp_loc)
 
     with git_handler as gh:
         v1 = gh.move_git_repo_to_tmp(subject_location)
         v2 = gh.move_git_repo_to_tmp(subject_location)
 
         os.makedirs('./temp/%d' % id_, exist_ok=True)
-        v1_pdg_generator = PDG_Generator(
+        v1_pdg_generator = PdgGenerator(
             repository_location=v1,
             target_filename='before_pdg.dot',
             target_location='./temp/%d' % id_,
             extractor_location=extractor_location)
-        v2_pdg_generator = PDG_Generator(
+        v2_pdg_generator = PdgGenerator(
             repository_location=v2,
             target_filename='after_pdg.dot',
             target_location='./temp/%d' % id_,
             extractor_location=extractor_location)
         for chain in work:
-            print('Working on chain: %s' % str(chain))
+            logging.info(f"Working on chain: {chain}")
             from_ = chain[0]
-            to_ = chain[1]
 
-            gh.set_git_to_rev(from_, v1)
-            gh.set_git_to_rev(to_, v2)
+            gh.set_git_to_rev(from_+'^', v1)
+            gh.set_git_to_rev(from_, v2)
 
-            # labeli_changes = dict()
-            # # 获取from_提交与from_提交的父提交之间的在v2仓库的差异
-            # labeli_changes[0] = gh.process_diff_between_commits(from_ + '^', from_, v2)
-            # previous_sha = from_
-            # i = 1
-            # for to_ in chain[1:]:
-            #     gh.cherry_pick_on_top(to_, v2)
+            labeli_changes = dict()
+            labeli_changes[0] = gh.process_diff_between_commits(from_ + '^', from_, v2)
 
-            changes = gh.process_diff_between_commits(from_, to_, v2)
+            previous_sha = from_
+            i = 1
+            for to_ in chain[1:]:
+                gh.cherry_pick_on_top(to_, v2)
 
-                # labeli_changes[i] = gh.process_diff_between_commits(previous_sha, to_, v2)
-                # i += 1
-                # previous_sha = to_
-            files_touched = {filename for _, filename, _, _, _ in changes if
+                changes = gh.process_diff_between_commits(from_, to_, v2)
+
+                labeli_changes[i] = gh.process_diff_between_commits(previous_sha, to_, v2)
+                i += 1
+                previous_sha = to_
+
+                # find all java files touched in the changes
+                # if use other languages, change the file extension
+                # cs for C#, py for Python, etc.
+                files_touched = {filename for _, filename, _, _, _ in changes if
                                  os.path.basename(filename).split('.')[-1] == 'java'}
 
-            for filename in files_touched:
-                local_filename = os.path.normpath(filename.lstrip('/'))
-                logging.info(f"Generating PDGs for {filename}")
-                try:
-                    output_path = './data/corpora_raw/%s/%s_%s/%s.dot' % (
-                        repository_name, from_, to_, os.path.basename(filename))
+                for filename in files_touched:
+                    # local_filename = os.path.normpath(filename.lstrip('/'))
+                    # logging.info(f"Generating PDGs for {filename}")
                     try:
-                        with open(output_path) as f:
-                            print('Skipping %s as it exits' % output_path)
-                            f.read()
-                    except FileNotFoundError:
-                        v1_pdg_generator(filename)
-                        v2_pdg_generator(filename)
-                        delta_gen = deltaPDG('./temp/%d/before_pdg.dot' % id_, m_fuzziness=method_fuzziness,
-                                             n_fuzziness=node_fuzziness)
-                        delta_pdg = delta_gen('./temp/%d/after_pdg.dot' % id_,
-                                              [ch for ch in changes if ch[1] == filename])
-                        # delta_pdg = mark_originating_commit(delta_pdg, mark_origin(changes, labeli_changes),
-                        #                                     filename)
-                        os.makedirs(os.path.dirname(output_path), exist_ok=True)
-                        nx.set_node_attributes(delta_pdg, local_filename, "filepath")
-                        nx.drawing.nx_pydot.write_dot(quote_label(delta_pdg), output_path)
-                except Exception:
-                    pass
-                # if len(files_touched) != 0:
-                #     merged_path = merge_files_pdg(out_dir)
-                #     clean_path = clean_graph(merged_path, repository_name)
-                #     validate([clean_path], 1, 1, repository_name)  # Flexeme's paper uses 1-hop clustering
+                        output_path = './data/corpora_raw/%s/%s_%s/%s.dot' % (
+                            repository_name, from_, to_, os.path.basename(filename))
+                        try:
+                            with open(output_path) as f:
+                                print('Skipping %s as it exits' % output_path)
+                                f.read()
+                        except FileNotFoundError:
+                            v1_pdg_generator(filename)
+                            v2_pdg_generator(filename)
+                            delta_gen = deltaPDG('./temp/%d/before_pdg.dot' % id_, m_fuzziness=method_fuzziness,
+                                                 n_fuzziness=node_fuzziness)
+                            delta_pdg = delta_gen('./temp/%d/after_pdg.dot' % id_,
+                                                  [ch for ch in changes if ch[1] == filename])
+                            delta_pdg = mark_originating_commit(delta_pdg, mark_origin(changes, labeli_changes),
+                                                                filename)
+                            os.makedirs(os.path.dirname(output_path), exist_ok=True)
+                            # nx.set_node_attributes(delta_pdg, local_filename, "filepath")
+                            nx.drawing.nx_pydot.write_dot(quote_label(delta_pdg), output_path)
+                    except Exception:
+                        pass
+                    # if len(files_touched) != 0:
+                    #     merged_path = merge_files_pdg(out_dir)
+                    #     clean_path = clean_graph(merged_path, repository_name)
+                    #     validate([clean_path], 1, 1, repository_name)  # Flexeme's paper uses 1-hop clustering
 
 
 if __name__ == '__main__':
-    # 创建 ArgumentParser 对象
-    parser = argparse.ArgumentParser(description="示例脚本说明")
+    parser = argparse.ArgumentParser(description="Generate corpus from a git repository")
 
-    # 添加参数
-    parser.add_argument("json_location", help="JSON文件位置")
-    parser.add_argument("git_location", help="Git位置")
-    parser.add_argument("temp_location", help="临时文件位置")
-    parser.add_argument("extractor_location", help="提取器位置")
-    parser.add_argument("thread_id_start", type=int, help="线程ID起始值")
-    parser.add_argument("number_of_threads", type=int, help="线程数量")
+    parser.add_argument("json_location", help="The location of the json file")
+    parser.add_argument("git_location", help="The location of the git repository")
+    parser.add_argument("temp_location", help="The location of the temporary directory")
+    parser.add_argument("extractor_location", help="The location of the extractor")
+    parser.add_argument("thread_id_start", type=int, help="The starting id of the thread")
+    parser.add_argument("number_of_threads", type=int, help="The number of threads")
 
-    # 解析命令行参数
     args = parser.parse_args()
 
     json_location = args.json_location
@@ -171,8 +179,8 @@ if __name__ == '__main__':
         with open(json_location, 'w') as f:
             f.write(json.dumps(list_to_tangle))
 
-    chunck_size = int(len(list_to_tangle) / n_workers)
-    list_to_tangle = [list_to_tangle[i:i + chunck_size] for i in range(0, len(list_to_tangle), chunck_size)]
+    chunk_size = int(len(list_to_tangle) / n_workers)
+    list_to_tangle = [list_to_tangle[i:i + chunk_size] for i in range(0, len(list_to_tangle), chunk_size)]
 
     processes = []
     id_ = int(sys.argv[5])

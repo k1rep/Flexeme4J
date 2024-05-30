@@ -12,7 +12,7 @@ import scipy.spatial
 import scipy.special
 from tqdm import tqdm
 
-from deltaPDG.Util.git_util import Git_Util
+from deltaPDG.Util.git_util import GitUtil
 
 
 def build_corpus(json_location_, subject_location_, temp_dir_):
@@ -27,7 +27,7 @@ def build_corpus(json_location_, subject_location_, temp_dir_):
     file_length_map = defaultdict(lambda: dict())
 
     def worker(work_):
-        git_handler = Git_Util(temp_dir=temp_dir_)
+        git_handler = GitUtil(temp_dir=temp_dir_)
         with git_handler as gh:
             v1 = gh.move_git_repo_to_tmp(subject_location_)
             v2 = gh.move_git_repo_to_tmp(subject_location_)
@@ -91,7 +91,7 @@ def diffs_by_file(diff):
 
 
 def build_occurrence_matrix(subject_location_, temp_dir_, filter_commits):
-    git_handler = Git_Util(temp_dir=temp_dir_)
+    git_handler = GitUtil(temp_dir=temp_dir_)
     with git_handler as gh:
         temp = gh.move_git_repo_to_tmp(subject_location_)
         candidates = gh.get_all_commit_hashes_authors_dates_messages(temp)

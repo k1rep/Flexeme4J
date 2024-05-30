@@ -11,6 +11,7 @@ from Util.evaluation import evaluate
 from deltaPDG.Util.pygraph_util import read_graph_from_dot, obj_dict_to_networkx
 
 
+# Data-Use Chains
 def extract_DU_chains_from_delta(graph):
     # Remove non-data-flow edges from graph
     # That is we keep only edges with key=1 for out graph format
