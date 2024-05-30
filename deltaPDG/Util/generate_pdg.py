@@ -32,8 +32,10 @@ class PdgGenerator:
         logging.info(f"Extracting PDG for {os.path.join(self.repository_location, filename)}")
         # jar_path = "./PDGExtractor/PropertyGraph.jar"
         # jar_path = "./PDGExtractor/TinyPDG-0.1.0.jar"
-        command = ["java", "-jar", self.extractor_location, "-d", self.repository_location + filename,
-                   "-p", os.path.join(self.target_location, self.target_filename)]
+        # command = ["java", "-jar", self.extractor_location, "-d", self.repository_location + filename,
+        #            "-p", os.path.join(self.target_location, self.target_filename)]
+        command = ["java", "-jar", self.extractor_location,
+                   self.repository_location + filename, os.path.join(self.target_location, self.target_filename)]
         process = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
         stdout, stderr = process.communicate()
         if stderr:
