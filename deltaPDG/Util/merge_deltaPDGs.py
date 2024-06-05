@@ -11,12 +11,11 @@ from deltaPDG.deltaPDG import quote_label
 
 def merge_files_pdg(path_to_commit):
     """
-    Given a directory containing dot file per java file, merges them into a single dot file.
+    Given a directory containing dot file per java or c# file, merges them into a single dot file.
     """
     paths = get_pattern_paths('*.java.dot', path_to_commit)
-    if not len(paths):
+    if len(paths) == 0:
         paths = get_pattern_paths('*.cs.dot', path_to_commit)
-
     merged = merge_deltas_for_a_commit(paths)
     merged_path = os.path.join(path_to_commit, 'merged.dot')
     try:

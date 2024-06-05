@@ -8,10 +8,10 @@ import jsonpickle
 import networkx as nx
 from deltaPDG.Util.generate_pdg import PdgGenerator
 from deltaPDG.Util.git_util import GitUtil
+from deltaPDG.Util.merge_deltaPDGs import merge_files_pdg
 from deltaPDG.deltaPDG import deltaPDG, quote_label
+from du_chains.DU_chains_closure import validate
 from tangle_concerns.tangle_by_file import tangle_by_file
-
-sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 
 logging.basicConfig(level=logging.INFO,
@@ -73,7 +73,7 @@ def mark_origin(tangled_diff, atomic_diffs):
     return output
 
 
-def worker(work, subject_location, id_, temp_loc, extractor_location):
+def worker(work, subject_location, id_, temp_loc, extractor_location, src_code):
     repository_name = os.path.basename(subject_location)
     # Tolerance of a certain amount of disturbance in the PDG
     method_fuzziness = 100
@@ -90,7 +90,8 @@ def worker(work, subject_location, id_, temp_loc, extractor_location):
             repository_location=v1,
             target_filename='before_pdg.dot',
             target_location='./temp/%d' % id_,
-            extractor_location=extractor_location)
+            extractor_location=extractor_location
+        )
         v2_pdg_generator = PdgGenerator(
             repository_location=v2,
             target_filename='after_pdg.dot',
@@ -100,7 +101,7 @@ def worker(work, subject_location, id_, temp_loc, extractor_location):
             logging.info(f"Working on chain: {chain}")
             from_ = chain[0]
 
-            gh.set_git_to_rev(from_+'^', v1)
+            gh.set_git_to_rev(from_ + '^', v1)
             gh.set_git_to_rev(from_, v2)
 
             labeli_changes = dict()
@@ -111,7 +112,7 @@ def worker(work, subject_location, id_, temp_loc, extractor_location):
             for to_ in chain[1:]:
                 gh.cherry_pick_on_top(to_, v2)
 
-                changes = gh.process_diff_between_commits(from_, to_, v2)
+                changes = gh.process_diff_between_commits(from_ + '^', to_, v2)
 
                 labeli_changes[i] = gh.process_diff_between_commits(previous_sha, to_, v2)
                 i += 1
@@ -120,22 +121,26 @@ def worker(work, subject_location, id_, temp_loc, extractor_location):
                 # find all java files touched in the changes
                 # if use other languages, change the file extension
                 # cs for C#, py for Python, etc.
-                files_touched = {filename for _, filename, _, _, _ in changes if
-                                 os.path.basename(filename).split('.')[-1] == 'java'}
+                if src_code == 'java':
+                    files_touched = {filename for _, filename, _, _, _ in changes if
+                                    os.path.basename(filename).split('.')[-1] == 'java'}
+                elif src_code == 'csharp':
+                    files_touched = {filename for _, filename, _, _, _ in changes if
+                                    os.path.basename(filename).split('.')[-1] == 'cs'}
 
                 for filename in files_touched:
                     # local_filename = os.path.normpath(filename.lstrip('/'))
                     # logging.info(f"Generating PDGs for {filename}")
                     try:
-                        output_path = './data/corpora_raw/%s/%s_%s/%s.dot' % (
-                            repository_name, from_, to_, os.path.basename(filename))
+                        output_path = './data/corpora_raw/%s/%s_%s/%d/%s.dot' % (
+                            repository_name, from_, to_, i, os.path.basename(filename))
                         try:
                             with open(output_path) as f:
                                 print('Skipping %s as it exits' % output_path)
                                 f.read()
                         except FileNotFoundError:
-                            v1_pdg_generator(filename)
-                            v2_pdg_generator(filename)
+                            v1_pdg_generator(filename, src_code=src_code)
+                            v2_pdg_generator(filename, src_code=src_code)
                             delta_gen = deltaPDG('./temp/%d/before_pdg.dot' % id_, m_fuzziness=method_fuzziness,
                                                  n_fuzziness=node_fuzziness)
                             delta_pdg = delta_gen('./temp/%d/after_pdg.dot' % id_,
@@ -144,7 +149,8 @@ def worker(work, subject_location, id_, temp_loc, extractor_location):
                                                                 filename)
                             os.makedirs(os.path.dirname(output_path), exist_ok=True)
                             # nx.set_node_attributes(delta_pdg, local_filename, "filepath")
-                            nx.drawing.nx_pydot.write_dot(quote_label(delta_pdg), output_path)
+                            # nx.drawing.nx_pydot.write_dot(quote_label(delta_pdg), output_path)
+                            merge_files_pdg(output_path)
                     except Exception:
                         pass
                     # if len(files_touched) != 0:
@@ -162,6 +168,7 @@ if __name__ == '__main__':
     parser.add_argument("extractor_location", help="The location of the extractor")
     parser.add_argument("thread_id_start", type=int, help="The starting id of the thread")
     parser.add_argument("number_of_threads", type=int, help="The number of threads")
+    parser.add_argument("src_code", help="The source code language")
 
     args = parser.parse_args()
 
@@ -170,6 +177,7 @@ if __name__ == '__main__':
     temp_loc = args.temp_location
     extractor_location = args.extractor_location
     n_workers = args.number_of_threads
+    src_code = args.src_code
 
     try:
         with open(json_location) as f:
@@ -185,7 +193,7 @@ if __name__ == '__main__':
     processes = []
     id_ = int(sys.argv[5])
     for work in list_to_tangle:
-        process = Process(target=worker, args=(work, subject_location, id_, temp_loc, extractor_location))
+        process = Process(target=worker, args=(work, subject_location, id_, temp_loc, extractor_location, src_code))
         id_ += 1
         processes.append(process)
         process.start()
