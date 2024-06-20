@@ -5,6 +5,7 @@ that were committed by the same author within a certain period of time (point 1)
 and that do not contain too many keywords in the message, (point 4)
 links those changes into chains, and returns all such chains of commits.
 """
+import argparse
 import datetime
 import json
 import os
@@ -136,7 +137,7 @@ def tangle_by_file(subject, temp_loc):
     links those changes into chains, and returns all such chains of commits.
     """
     days = 14
-    up_to_concerns = 4
+    up_to_concerns = 6
 
     git_handler = GitUtil(temp_dir=temp_loc)
 
@@ -175,10 +176,22 @@ def tangle_by_file(subject, temp_loc):
     return history_flat
 
 
-if __name__ == '__main__':
-    repository_name = sys.argv[1]
+def process_repository(repository_name):
     history_flat = tangle_by_file('../subjects/%s' % repository_name, '../temp')
     output_dir = '../out/{}'.format(repository_name)
     os.makedirs(output_dir, exist_ok=True)
     with open(os.path.join(output_dir, '{}_history_filtered_flat.json'.format(repository_name)), 'w') as f:
         f.write(json.dumps(history_flat))
+
+
+def main():
+    parser = argparse.ArgumentParser(description='Process multiple repositories.')
+    parser.add_argument('repositories', metavar='N', type=str, nargs='+', help='a list of repository names')
+    args = parser.parse_args()
+
+    for repository_name in args.repositories:
+        process_repository(repository_name)
+
+
+if __name__ == '__main__':
+    main()
