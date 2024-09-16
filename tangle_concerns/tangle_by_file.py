@@ -17,8 +17,63 @@ import numpy as np
 
 from deltaPDG.Util.git_util import GitUtil
 
-# some keywords that are used to identify bug-fixing and feature-implementing commits
-KEYWORDS = {'FIX', 'FIXES', 'FIXED', 'IMPLEMENTS', 'IMPLEMENTED', 'IMPLEMENT', 'BUG', 'FEATURE', }
+# some VERB keywords that are used to identify bug-fixing and feature-implementing commits
+KEYWORDS = {'FIX',
+            'FIXES',
+            'FIXED',
+            'IMPLEMENTS',
+            'IMPLEMENTED',
+            'IMPLEMENT',
+            'BUG',
+            'FEATURE',
+            'BUGS',
+            'FEATURES',
+            'CHANGE',
+            'CHANGES',
+            'CHANGED',
+            'ADDED',
+            'ADDS',
+            'ADD',
+            'REMOVED',
+            'REMOVES',
+            'REMOVE',
+            'REFACTOR',
+            'REFACTORS',
+            'REFACTORED',
+            'UPDATE',
+            'UPDATES',
+            'UPDATED',
+            'MODIFY',
+            'MODIFIES',
+            'MODIFIED',
+            'CORRECT',
+            'CORRECTS',
+            'CORRECTED',
+            'SOLVE',
+            'SOLVES',
+            'SOLVED',
+            'RESOLVE',
+            'RESOLVES',
+            'RESOLVED',
+            'REPAIR',
+            'REPAIRS',
+            'REPAIRED',
+            'DELETE',
+            'DELETES',
+            'DELETED',
+            'PATCH',
+            'PATCHES',
+            'PATCHED',
+            'CLEAN',
+            'CLEANS',
+            'CLEANED',
+            'RENAME',
+            'RENAMES',
+            'RENAMED',
+            'REFORMAT',
+            'REFORMATS',
+            'REFORMATTED',
+            }
 
 
 def get_history_by_file(gh: GitUtil, repository_root: str, files_considered: List[str]):
@@ -137,7 +192,7 @@ def tangle_by_file(subject, temp_loc):
     links those changes into chains, and returns all such chains of commits.
     """
     days = 14
-    up_to_concerns = 6
+    up_to_concerns = 5
 
     git_handler = GitUtil(temp_dir=temp_loc)
 

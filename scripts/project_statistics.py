@@ -95,12 +95,13 @@ def count_subarrays(data):
 
 def main(repo_paths):
     sum = 0
-    sum_of_concerns = [0] * 7
+    sum_of_concerns = defaultdict(int)
     for repo_path in repo_paths:
         repo_dir = os.path.join('../subjects', repo_path)
         if os.path.isdir(repo_dir):
             total_lines = count_java_lines_in_git(repo_dir)
             sum += total_lines
+            print('-' * 30)
             print(f'Total lines of Java code in {repo_dir}: {total_lines}')
             last_commit_hash = get_last_commit_hash(repo_dir)
             if last_commit_hash:
@@ -109,15 +110,15 @@ def main(repo_paths):
             with open(json_file_path, 'r', encoding='utf-8') as f:
                 data = json.load(f)
                 total_count, sub_elements_count = count_subarrays(data)
-                concerns = {key-1: sub_elements_count[key] for key in sorted(sub_elements_count)}
-                sum_of_concerns[1:] = [sum_of_concerns[i] + concerns[i] for i in range(1, 6)]
-                sum_of_concerns[0] += total_count
-                total_tangled_commits = total_count - concerns[1]
-                print(f'Total commits: {total_tangled_commits}, concerns count: {concerns}')
+                for k, v in sub_elements_count.items():
+                    sum_of_concerns[k] += v
+                print(f'Total commits: {total_count}, concerns count: {sub_elements_count}')
         else:
             print(f'Invalid repository path: {repo_path}')
+    print('-' * 30)
     print(f'sum of Total lines: {sum}')
     print(f'sum of Total concerns: {sum_of_concerns}')
+    print('-' * 30)
 
 
 if __name__ == '__main__':
