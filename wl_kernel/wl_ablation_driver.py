@@ -49,6 +49,7 @@ if __name__ == '__main__':
         all_graphs = [d for d in all_graphs
                       if os.path.basename(os.path.dirname(os.path.dirname(d))) not in datapoints_done]
         random.shuffle(all_graphs)
+        print(len(all_graphs))
         if len(all_graphs) > 0:
             validate(all_graphs, times, k_hop, repository_name, edges_kept=edges_kept, suffix=suffix)
             with open('./out/%s/wl_%s_%d_results_%s.json' % (repository_name, edges_kept, k_hop, suffix), 'w') as f:

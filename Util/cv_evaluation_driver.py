@@ -204,4 +204,4 @@ if __name__ == '__main__':
 
             return worker
 
-    driver(times, out_name, projects, worker_wrapper, temp_dir_='D:\Temp')
+    driver(times, out_name, projects, worker_wrapper, temp_dir_='./tmp/work')

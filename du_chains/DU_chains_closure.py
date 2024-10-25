@@ -111,7 +111,7 @@ def validate(files: List[str], times, repository_name):
                         label.append(int(closure.nodes[node]['prediction']))
                     except KeyError:
                         label.append(-1)
-            nx.drawing.nx_pydot.write_dot(closure, graph_location[:-4] + '_closure.dot')
+            # nx.drawing.nx_pydot.write_dot(closure, graph_location[:-4] + '_closure.dot')
             truth = np.asarray(truth)
             label = np.asarray(label)
             acc, overlap = evaluate(truth[label > -1], label[label > -1],

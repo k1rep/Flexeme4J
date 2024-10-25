@@ -192,7 +192,7 @@ def tangle_by_file(subject, temp_loc):
     links those changes into chains, and returns all such chains of commits.
     """
     days = 14
-    up_to_concerns = 5
+    up_to_concerns = 4
 
     git_handler = GitUtil(temp_dir=temp_loc)
 
